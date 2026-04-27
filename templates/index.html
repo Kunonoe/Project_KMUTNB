@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Diagram Grader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">AI Diagram Grader</div>
+    <div class="topbar-actions">
+      <span id="currentUser">ยังไม่เข้าสู่ระบบ</span>
+      <button id="logoutBtn" class="btn ghost">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="loginPanel" class="panel narrow">
+      <h1>เข้าสู่ระบบผู้ตรวจ</h1>
+      <p class="muted">บัญชีเริ่มต้น: admin/admin123 หรือ teacher/teacher123</p>
+      <form id="loginForm" class="form-grid">
+        <label>Username <input type="text" name="username" required /></label>
+        <label>Password <input type="password" name="password" required /></label>
+        <button class="btn primary" type="submit">Login</button>
+      </form>
+    </section>
+
+    <section id="appPanel" class="hidden">
+      <div class="panel">
+        <h2>1) สร้างข้อสอบ</h2>
+        <form id="createExamForm" class="form-grid two">
+          <label>ชื่อข้อสอบ <input name="title" required placeholder="เช่น Midterm ER 2026" /></label>
+          <label>ประเภท
+            <select name="diagram_type">
+              <option value="er">ER Diagram</option>
+              <option value="flowchart">Flowchart</option>
+            </select>
+          </label>
+          <label class="span2">คำอธิบาย
+            <textarea name="description" rows="2" placeholder="รายละเอียดข้อสอบ"></textarea>
+          </label>
+          <div class="head-actions span2">
+            <button class="btn primary" type="submit">สร้างข้อสอบ</button>
+            <button id="seedSamplesBtn" class="btn ghost" type="button">เพิ่มตัวอย่างข้อสอบ</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>2) เลือกข้อสอบและตั้งค่า</h2>
+        <div class="form-grid two">
+          <label>เลือกข้อสอบ
+            <select id="examSelect"></select>
+          </label>
+          <div class="info-box" id="examInfo">ยังไม่มีข้อสอบ</div>
+        </div>
+
+        <div class="sub-panels">
+          <form id="answerKeyForm" class="mini-panel" enctype="multipart/form-data">
+            <h3>Upload Answer Key</h3>
+            <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf" required />
+            <button class="btn primary" type="submit">อัปโหลดเฉลย</button>
+            <p class="muted">รองรับรูปและ PDF หน้าแรก</p>
+          </form>
+
+          <form id="rubricForm" class="mini-panel">
+            <h3>Rubric</h3>
+            <div class="head-actions">
+              <button type="button" class="btn ghost" id="presetBalancedBtn">Preset: สมดุล</button>
+              <button type="button" class="btn ghost" id="presetStructureBtn">Preset: เน้นโครงสร้าง</button>
+            </div>
+            <label>Component Weight
+              <div class="stepper-wrap">
+                <button type="button" class="stepper" data-target="component_weight" data-step="-5">-</button>
+                <input type="number" name="component_weight" value="40" min="0" step="1" />
+                <button type="button" class="stepper" data-target="component_weight" data-step="5">+</button>
+              </div>
+            </label>
+            <label>Text Weight
+              <div class="stepper-wrap">
+                <button type="button" class="stepper" data-target="text_weight" data-step="-5">-</button>
+                <input type="number" name="text_weight" value="30" min="0" step="1" />
+                <button type="button" class="stepper" data-target="text_weight" data-step="5">+</button>
+              </div>
+            </label>
+            <label>Structure Weight
+              <div class="stepper-wrap">
+                <button type="button" class="stepper" data-target="structure_weight" data-step="-5">-</button>
+                <input type="number" name="structure_weight" value="30" min="0" step="1" />
+                <button type="button" class="stepper" data-target="structure_weight" data-step="5">+</button>
+              </div>
+            </label>
+            <label>Pass Score
+              <div class="stepper-wrap">
+                <button type="button" class="stepper" data-target="pass_score" data-step="-5">-</button>
+                <input type="number" name="pass_score" value="60" min="0" max="100" step="1" />
+                <button type="button" class="stepper" data-target="pass_score" data-step="5">+</button>
+              </div>
+            </label>
+            <div class="advanced-wrap">
+              <button id="toggleAdvancedRubricBtn" type="button" class="btn ghost">แสดงตั้งค่าขั้นสูง</button>
+              <div id="advancedRubricPanel" class="hidden">
+            <h3>ER Keyword Checklist (เช็กคำเฉพาะรายข้อ)</h3>
+            <p class="muted">ระบุหัวข้อ เช่น entity/relationship/attribute และคำที่ต้องเจอในภาพ ถ้าเจอจะได้เต็มในข้อนั้น</p>
+            <div id="erKeywordList" class="keyword-list"></div>
+            <div class="head-actions">
+              <button id="addErKeywordBtn" type="button" class="btn ghost">+ เพิ่มหัวข้อ ER</button>
+            </div>
+              </div>
+            </div>
+            <p class="muted">หลังอัปโหลดเฉลย สามารถเพิ่ม/ลดค่า Rubric ได้ทันทีที่นี่</p>
+            <button class="btn primary" type="submit">บันทึก Rubric</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>3) Batch ตรวจคำตอบ</h2>
+        <form id="batchForm" enctype="multipart/form-data" class="form-grid">
+          <label>ไฟล์คำตอบนักศึกษา (หลายไฟล์)
+            <input type="file" name="files" multiple accept=".jpg,.jpeg,.png,.pdf" required />
+          </label>
+          <button class="btn primary" type="submit">เริ่มตรวจอัตโนมัติ</button>
+        </form>
+        <div id="batchStatus" class="log-box"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>4) ผลตรวจและตรวจทาน</h2>
+          <div class="head-actions">
+            <button id="refreshResultsBtn" class="btn ghost">รีเฟรชผล</button>
+            <button id="exportCsvBtn" class="btn ghost">Export CSV</button>
+            <button id="exportXlsxBtn" class="btn ghost">Export XLSX</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Student</th>
+                <th>File</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Final</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="detailPanel" class="panel hidden">
+        <h2>Result Detail</h2>
+        <div id="detailContent"></div>
+        <form id="overrideForm" class="form-grid two">
+          <input type="hidden" name="submission_id" />
+          <label>Override Score <input type="number" name="score" min="0" max="100" step="0.01" required /></label>
+          <label>Note <input type="text" name="note" placeholder="เหตุผลการปรับคะแนน" /></label>
+          <button class="btn primary" type="submit">บันทึกการ Override</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
